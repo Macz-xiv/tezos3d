@@ -1,10 +1,12 @@
-// Helper: Convert IPFS URI to HTTP URL
+// ========== Helper Functions ==========
+
+// Convert IPFS URI to public HTTP gateway URL
 function ipfsToHttp(ipfsUri) {
   if (!ipfsUri) return "";
   return ipfsUri.replace("ipfs://", "https://ipfs.io/ipfs/");
 }
 
-// Load a GLB or GLTF model into the canvas
+// Load a GLB/GLTF model into the canvas
 function loadGLBModel(url) {
   const container = document.getElementById('canvas-container');
   container.innerHTML = ""; // Clear previous
@@ -34,35 +36,113 @@ function loadGLBModel(url) {
   });
 }
 
-// Example NFT metadata (replace with dynamic loading as needed)
-const metadata = {
-  "formats": [
-    {
-      "mimeType": "image/webp",
-      "uri": "ipfs://QmSawSRjptebdRWASAvbKifT8WQ7kd2VNkBS7yvsAtZ8PH"
-    },
-    {
-      "mimeType": "model/gltf-binary",
-      "uri": "ipfs://QmahWdvfi3RMKwsRseM8GTqCmKuQEjs5DDgs8PvgtnYuAr"
-    },
-    {
-      "mimeType": "image/webp",
-      "uri": "ipfs://QmaXh5BERriSDAZyaCEVa1ap7RvcSJbzS1YpN2gz8sjcyf"
-    }
-  ]
-};
+// ========== Wallet Connection ==========
 
-document.addEventListener('DOMContentLoaded', () => {
-  const formats = metadata.formats || [];
-  // Filter for 3D assets only
-  const threeDFormats = formats.filter(
+let tezosAddress = null;
+let walletClient = null;
+const { DAppClient } = window.beacon;
+
+async function connectWallet() {
+  if (!window.beacon) {
+    alert("Beacon SDK not loaded.");
+    return;
+  }
+  walletClient = new DAppClient({ name: "Tezos 3D NFT Viewer" });
+  try {
+    const permissions = await walletClient.requestPermissions();
+    tezosAddress = permissions.address;
+    document.getElementById("wallet-address").textContent = tezosAddress;
+    document.getElementById("address-input").placeholder = "Leave blank to use connected wallet";
+  } catch (err) {
+    alert("Wallet connection canceled or failed.");
+  }
+}
+
+// ========== Fetch NFT Data ==========
+
+async function fetchNFTs(address) {
+  // Query FA2 tokens with nonzero balance
+  const url = `https://api.tzkt.io/v1/tokens/balances?account=${address}&balance.ne=0&token.standard=fa2&select=token.metadata`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error("Failed to fetch NFTs");
+  return await resp.json();
+}
+
+function get3DAssetFromMetadata(metadata) {
+  // filter for 3D assets
+  const threeDFormats = (metadata.formats || []).filter(
     f => f.mimeType === "model/gltf-binary" || f.mimeType === "model/gltf+json"
   );
-  const assetUri = threeDFormats.length > 0 ? ipfsToHttp(threeDFormats[0].uri) : null;
-
-  if (assetUri) {
-    loadGLBModel(assetUri);
-  } else {
-    alert("No 3D asset found in this NFT.");
+  if (threeDFormats.length > 0) {
+    return ipfsToHttp(threeDFormats[0].uri);
   }
+  // fallback: try artifactUri
+  if (metadata.artifactUri && /\.(glb|gltf)$/i.test(metadata.artifactUri)) {
+    return ipfsToHttp(metadata.artifactUri);
+  }
+  return null;
+}
+
+// ========== NFT Gallery UI ==========
+
+function renderNFTList(nfts) {
+  const nftList = document.getElementById("nft-list");
+  nftList.innerHTML = "";
+  let first3D = null;
+  nfts.forEach((meta, idx) => {
+    const assetUrl = get3DAssetFromMetadata(meta);
+    if (!assetUrl) return;
+    if (!first3D) first3D = { assetUrl, idx };
+
+    // thumbnail: prefer displayUri or thumbnailUri
+    let thumb = meta.thumbnailUri || meta.displayUri || meta.image || "";
+    thumb = ipfsToHttp(thumb);
+
+    const name = meta.name || "Unnamed";
+    const card = document.createElement("div");
+    card.className = "nft-card";
+    card.innerHTML = `
+      <img src="${thumb}" alt="${name}" onerror="this.src=''; this.alt='No thumbnail';" />
+      <div class="nft-title">${name}</div>
+    `;
+    card.addEventListener("click", () => {
+      document.querySelectorAll('.nft-card').forEach(e => e.classList.remove('selected'));
+      card.classList.add('selected');
+      loadGLBModel(assetUrl);
+    });
+    nftList.appendChild(card);
+  });
+  // Auto-select first 3D NFT
+  if (first3D) {
+    nftList.querySelectorAll('.nft-card')[first3D.idx].classList.add('selected');
+    loadGLBModel(first3D.assetUrl);
+  } else {
+    document.getElementById('canvas-container').innerHTML = "";
+    nftList.innerHTML = "<div>No 3D NFTs found for this address.</div>";
+  }
+}
+
+// ========== Main App Logic ==========
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById("connect-wallet").onclick = connectWallet;
+
+  document.getElementById("load-nfts").onclick = async () => {
+    let address = document.getElementById("address-input").value.trim();
+    if (!address) {
+      if (!tezosAddress) {
+        alert("Connect wallet or enter a Tezos address.");
+        return;
+      }
+      address = tezosAddress;
+    }
+    document.getElementById("nft-list").innerHTML = "Loading NFTs...";
+    try {
+      const nfts = await fetchNFTs(address);
+      renderNFTList(nfts);
+    } catch (err) {
+      document.getElementById("nft-list").innerHTML = "Failed to load NFTs.";
+      alert("Error loading NFTs: " + err.message);
+    }
+  };
 });
