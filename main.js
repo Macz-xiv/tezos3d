@@ -40,15 +40,16 @@ function loadGLBModel(url) {
 
 let tezosAddress = null;
 let walletClient = null;
-const { DAppClient } = window.beacon;
 
 async function connectWallet() {
   if (!window.beacon) {
     alert("Beacon SDK not loaded.");
     return;
   }
-  walletClient = new DAppClient({ name: "Tezos 3D NFT Viewer" });
   try {
+    // Use the Beacon SDK
+    const { DAppClient } = window.beacon;
+    walletClient = new DAppClient({ name: "Tezos 3D NFT Viewer" });
     const permissions = await walletClient.requestPermissions();
     tezosAddress = permissions.address;
     document.getElementById("wallet-address").textContent = tezosAddress;
@@ -89,10 +90,11 @@ function renderNFTList(nfts) {
   const nftList = document.getElementById("nft-list");
   nftList.innerHTML = "";
   let first3D = null;
+  let renderIdx = 0;
   nfts.forEach((meta, idx) => {
     const assetUrl = get3DAssetFromMetadata(meta);
     if (!assetUrl) return;
-    if (!first3D) first3D = { assetUrl, idx };
+    if (!first3D) first3D = { assetUrl, renderIdx };
 
     // thumbnail: prefer displayUri or thumbnailUri
     let thumb = meta.thumbnailUri || meta.displayUri || meta.image || "";
@@ -111,10 +113,11 @@ function renderNFTList(nfts) {
       loadGLBModel(assetUrl);
     });
     nftList.appendChild(card);
+    renderIdx++;
   });
   // Auto-select first 3D NFT
   if (first3D) {
-    nftList.querySelectorAll('.nft-card')[first3D.idx].classList.add('selected');
+    nftList.querySelectorAll('.nft-card')[first3D.renderIdx].classList.add('selected');
     loadGLBModel(first3D.assetUrl);
   } else {
     document.getElementById('canvas-container').innerHTML = "";
