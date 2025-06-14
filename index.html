@@ -4,12 +4,23 @@
   <meta charset="UTF-8">
   <title>Tezos 3D NFT Viewer</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Three.js and GLTFLoader via CDN -->
+  <!-- Three.js and GLTFLoader -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- Beacon SDK for Tezos wallet connection -->
+  <script src="https://unpkg.com/@airgap/beacon-sdk"></script>
 </head>
 <body>
   <h1>Tezos 3D NFT Viewer</h1>
+  <div class="wallet-section">
+    <button id="connect-wallet">Connect Tezos Wallet</button>
+    <span id="wallet-address"></span>
+  </div>
+  <div class="input-section">
+    <input type="text" id="address-input" placeholder="Enter Tezos address or leave blank for connected wallet" />
+    <button id="load-nfts">Load 3D NFTs</button>
+  </div>
+  <div id="nft-list"></div>
   <div id="canvas-container"></div>
   <script src="main.js"></script>
 </body>
