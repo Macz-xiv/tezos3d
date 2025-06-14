@@ -2,21 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tezos 3D</title>
+  <title>Tezos 3D NFT Viewer</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Three.js and GLTFLoader via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
-  <h1>Tezos 3D</h1>
-  <button id="connect-wallet">Connect Tezos Wallet</button>
-  <div id="wallet-address"></div>
-  <input type="text" id="glb-url" placeholder="Paste .glb file URL here">
-  <button id="load-glb">Load 3D Asset</button>
+  <h1>Tezos 3D NFT Viewer</h1>
   <div id="canvas-container"></div>
-  <!-- Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/loaders/GLTFLoader.js"></script>
-  <!-- Beacon SDK for Tezos -->
-  <script src="https://unpkg.com/@airgap/beacon-sdk"></script>
   <script src="main.js"></script>
 </body>
 </html>
